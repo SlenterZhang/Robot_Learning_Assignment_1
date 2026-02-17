@@ -107,7 +107,8 @@ class FiniteHorizonLQRController:
         #  TODO3.3: write your code here  #
         ###################################  
         # NOTE: dx = x - x_equilibrium
-        dx = TO_IMPLEMENT
+        x_eq = self.x_eq.to(dtype=x.dtype, device=x.device)
+        dx = x - x_eq
         ###################################
 
         # wrap angle error
@@ -120,7 +121,11 @@ class FiniteHorizonLQRController:
         ###################################  
         # NOTE: u = u_equilibrium + du
         # NOTE: the dimension of the tensor is important
-        u = TO_IMPLEMENT
+        K = self.K_seq[t].to(dtype=x.dtype, device=x.device)   # (1,2)
+        dx_col = dx.view(-1, 1)                                # (2,1)
+        du = -(K @ dx_col).view(())                            # scalar tensor (0-dim)
+        u_eq = self.u_eq.to(dtype=x.dtype, device=x.device)    # scalar tensor
+        u = u_eq + du
         ###################################        
 
         u = torch.clamp(u, -self.env.u_max, self.env.u_max)
@@ -146,9 +151,32 @@ class FiniteHorizonLQRController:
         ###################################  
         # NOTE: u = -Kx
         # NOTE: J^star = x^T P x
-        
-        return K, P
 
+        P_seq = [None] * (N + 1)
+        K_seq = [None] * N
+
+        # Termination condation
+        P_seq[N] = Qf.clone()
+
+        # backward Riccati recursion
+        for t in range(N - 1, -1, -1):
+            Pn1 = P_seq[t + 1]
+
+            # S = R + B^T P B   (m,m)
+            S = R + Bd.T @ Pn1 @ Bd
+
+            # K = S^{-1} (B^T P A)   (m,n)
+            # use solve for stability: S K = (B^T P A)
+            K = torch.linalg.solve(S, Bd.T @ Pn1 @ Ad)
+
+            # P = Q + A^T P A - A^T P B K
+            P = Q + Ad.T @ Pn1 @ Ad - Ad.T @ Pn1 @ Bd @ K
+
+            # (optional) enforce symmetry numerically
+            P = 0.5 * (P + P.T)
+            K_seq[t] = K
+            P_seq[t] = P
+        return K_seq, P_seq
 
 
 # ----------------------------
@@ -186,7 +214,7 @@ class LearnedMLPController:
         ###################################
         #  TODO4.2: write your code here  #
         ###################################             
-        u = TO_IMPLEMENT
+        u = self.model(z.unsqueeze(0)).squeeze(0).squeeze(-1)
         ###################################
 
         u = torch.clamp(u, -self.u_max, self.u_max)
@@ -225,7 +253,7 @@ class LearnedCNNController:
         ###################################
         #  TODO4.3: write your code here  #
         ###################################             
-        u = TO_IMPLEMENT
+        u = self.model(obs).squeeze(0).squeeze(-1)
         ###################################
 
         u = torch.clamp(u, -self.u_max, self.u_max)
@@ -272,7 +300,7 @@ class LearnedLSTMController:
         ###################################
         #  TODO4.4: write your code here  #
         ###################################               
-        u = TO_IMPLEMENT
+        u = self.model(seq).squeeze(0).squeeze(-1)
         ###################################
 
         u = torch.clamp(u, -self.u_max, self.u_max)

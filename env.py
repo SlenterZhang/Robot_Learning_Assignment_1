@@ -36,6 +36,31 @@ class InvertedPendulum:
         ###################################
         #  TODO3.3: write your code here  #
         ###################################  
+        I = float(self.I)
+        m = float(self.m)
+        g = float(self.g)
+        l = float(self.l)
+        b = float(self.b)
+        dt = float(self.dt)
+
+        dtype = torch.float64
+        device = torch.device("cpu")
+
+        A = torch.tensor(
+            [[0.0, 1.0],
+             [m * g * l / I, -b / I]],
+            dtype=dtype, device=device
+        )
+
+        B = torch.tensor(
+            [[0.0],
+             [1.0 / I]],
+            dtype=dtype, device=device
+        )
+
+        # Euler discretization: x_{k+1} = x_k + dt (A x_k + B u_k)
+        Ad = torch.eye(2, dtype=dtype, device=device) + dt * A
+        Bd = dt * B
 
         return Ad, Bd
 

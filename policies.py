@@ -10,7 +10,13 @@ class MLPPolicy(nn.Module):
         ###################################
         #  TODO4.2: write your code here  #
         ###################################
-        self.net = TO_IMPLEMENT  
+        self.net = nn.Sequential(
+            nn.Linear(in_dim, hidden),
+            nn.ReLU(inplace=True),
+            nn.Linear(hidden, hidden),
+            nn.ReLU(inplace=True),
+            nn.Linear(hidden, 1),
+        )
         ###################################
         
 
@@ -26,8 +32,23 @@ class CNNPolicy(nn.Module):
         ###################################
         #  TODO4.3: write your code here  #
         ###################################          
-        self.conv = TO_IMPLEMENT
-        self.head = TO_IMPLEMENT # MLP head
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_ch, 16, kernel_size=5, stride=2, padding=2), # -> (B,16,32,32)
+            nn.ReLU(inplace=True),
+            nn.Conv2d(16, 32, kernel_size=5, stride=2, padding=2), # -> (B, 32, 16, 16)
+            nn.ReLU(inplace=True),
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1), # -> (B, 64, 8, 8)
+            nn.ReLU(inplace=True),
+            nn.AdaptiveAvgPool2d((4, 4)), # -> (B,64,4,4)
+            nn.Flatten(),                   # -> (B, 64*4*4)
+        )
+        self.head = nn.Sequential(
+            nn.Linear(64 * 4 * 4, 128),
+            nn.ReLU(inplace=True),
+            nn.Linear(128, 64),
+            nn.ReLU(inplace=True),
+            nn.Linear(64, 1),
+        )
         ###################################
 
     def forward(self, x):
@@ -43,8 +64,17 @@ class LSTMPolicy(nn.Module):
         ###################################
         #  TODO4.4: write your code here  #
         ###################################             
-        self.lstm = TO_IMPLEMENT
-        self.head = TO_IMPLEMENT # MLP head
+        self.lstm = nn.LSTM(
+            input_size=in_dim,
+            hidden_size=hidden,
+            num_layers=layers,
+            batch_first=True,
+        )
+        self.head = nn.Sequential(
+            nn.Linear(hidden, hidden),
+            nn.ReLU(inplace=True),
+            nn.Linear(hidden, 1),
+        )
         ###################################
 
 
