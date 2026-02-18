@@ -11,3 +11,6 @@ env/
 
 # logs
 *.log
+
+# DS_Store file
+.DS_Store
